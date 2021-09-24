@@ -65,6 +65,8 @@ class ExpresionNegativo(ExpresionNumerica) :
         self.exp = exp
 
 
+
+
 class ExpresionNumero(ExpresionNumerica) :
     '''
         Esta clase representa una expresión numérica entera o decimal.
@@ -157,6 +159,7 @@ class ExpresionLength(ExpresionCadena) :
     def __init__(self, exp) :
         self.exp = exp  
 
+
 class ExpresionParse(ExpresionCadena) :
     '''
         Esta clase representa una cadena entre comillas simples.
@@ -233,6 +236,16 @@ class ExpresionArrayBi(ExpresionCadena) :
         self.exp = exp      
         self.linea = linea
         self.columna = columna
+class ExpresionArrayMulti(ExpresionCadena) :
+    '''
+        Esta clase representa una cadena entre comillas simples.
+        Recibe como parámetro el valor del token procesado por el analizador léxico
+    '''
+
+    def __init__(self, linea, columna, exp =[[[]]] ) :
+        self.exp = exp      
+        self.linea = linea
+        self.columna = columna
 
 class LlamadaArray(ExpresionCadena) :
     '''
@@ -257,6 +270,20 @@ class LlamadaArrayBi(ExpresionCadena) :
         self.id = id  
         self.indice = indice  
         self.indice2 = indice2      
+        self.linea = linea
+        self.columna = columna
+
+class LlamadaArrayMulti(ExpresionCadena) :
+    '''
+        Esta clase representa una cadena entre comillas simples.
+        Recibe como parámetro el valor del token procesado por el analizador léxico
+    '''
+
+    def __init__(self, id, indice, indice2, indice3, linea, columna ) :
+        self.id = id  
+        self.indice = indice  
+        self.indice2 = indice2 
+        self.indice3 = indice3     
         self.linea = linea
         self.columna = columna
 

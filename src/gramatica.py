@@ -269,6 +269,11 @@ def p_asignacion_bi_instr(t) :
     '''
     t[0] = AsignacionArrayBi(t[1],t[3], t[6], t[9],t.lineno(1),t.lexpos(1))
 
+def p_asignacion_multi_instr(t) :
+    '''asignacion_instr       : ID CORIZQ expresion CORDER CORIZQ expresion CORDER CORIZQ expresion CORDER IGUAL expresion PTCOMA
+    '''
+    t[0] = AsignacionArrayMulti(t[1],t[3], t[6], t[9], t[12],t.lineno(1),t.lexpos(1))
+
 def p_tipo_var(t) :
     '''tipo_var   : ENTERO64
                   | DECIMAL64
@@ -426,6 +431,10 @@ def p_expresion_arraybi(t):
     'expresion_numerica   : ID CORIZQ expresion CORDER CORIZQ expresion CORDER'
     t[0] = LlamadaArrayBi(t[1], t[3], t[6], t.lineno(1),t.lexpos(1))
 
+def p_expresion_arraymulti(t):
+    'expresion_numerica   : ID CORIZQ expresion CORDER CORIZQ expresion CORDER CORIZQ expresion CORDER'
+    t[0] = LlamadaArrayMulti(t[1], t[3], t[6], t[9], t.lineno(1),t.lexpos(1))
+
 
 def p_expresion_cadena(t) :
     'expresion     : CADENA'
@@ -448,6 +457,23 @@ def p_expresion_vectorbi(t) :
 def p_expresiones_expresion2(t) :
     'l_array_bidimencional    : expresion '
     t[0] = [t[1]]
+
+def p_lista_array(t):
+    'expresion :   CORIZQ l_array_multidimencional CORDER'
+    t[0] = ExpresionArrayMulti(t.lineno(1), t.lexpos(1),t[2])
+
+def p_expresion_vectorbi(t) :
+    'l_array_multidimencional     :  l_array_multidimencional COMA expresion '
+    t[1].append(t[3])
+    t[0] = t[1]
+    
+def p_expresiones_expresion2(t) :
+    'l_array_multidimencional    : expresion '
+    t[0] = [t[1]]
+
+
+
+
 
 
 

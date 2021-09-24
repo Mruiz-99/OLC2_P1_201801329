@@ -134,6 +134,48 @@ def procesar_asignacion(instr, ts, salida) :
                 print("Error semantico, el indice del array no debe ser negativo")
                 salida.agregar('>'+ "Error semantico, el indice del array no debe ser negativo"+'~')
                 return
+    if isinstance(instr, AsignacionArrayMulti):
+        val = resolver_cadena(instr.exp, ts, salida)
+        indice = resolver_cadena(instr.indice,ts,salida)
+        indice2 = resolver_cadena(instr.indice2,ts,salida)
+        indice3 = resolver_cadena(instr.indice3,ts,salida)
+        tipo = TIPO_DATO.ARRAY
+        array = ts.obtener(instr.id).valor
+        if array == "0":    
+            print("Error semantico, el array no existe, verifique el nombre correspondiente")
+            salida.agregar('>'+ "Error semantico, el array no existe, verifique el nombre correspondiente"+'~')
+            return
+        else:       
+            if indice >= 0 and indice2 >=0 and indice3:
+                c = 0
+                c2 = 0
+                c3 = 0
+                val_actual =[[[],[]],[[],[]]]
+                for i in array:
+                    for j in i:
+                        for k in j:
+                            if c == (indice-1) and c2 == (indice2-1) and c3 == (indice3 - 1):
+                                val_actual[c][c2].append(val)
+                                c3=c3+1
+                            else:
+                                val_actual[c][c2].append(k)
+                                print(c, " ", c2)
+                                c3=c3+1
+                        c2 = c2 + 1  
+                        c3=0  
+                    c = c + 1
+                    c2=0
+                print(val_actual)
+                simbolo = Simbolo(instr.id, tipo, val_actual)
+                ts.actualizar(simbolo)
+                while ts.anterior !="":
+                    ts = ts.anterior
+                    ts.actualizar(simbolo)
+                return
+            else:
+                print("Error semantico, el indice del array no debe ser negativo")
+                salida.agregar('>'+ "Error semantico, el indice del array no debe ser negativo"+'~')
+                return
             
         
     elif isinstance(instr, AsignacionTipo) :
@@ -227,7 +269,7 @@ def procesar_for_expresion(instr, ts, salida) :
     pilaCiclos.append("Ciclo")
     local = TablaDeSimbolos(ts, ts.simbolos)
     cadena = resolver_cadena(instr.exp,ts,salida)
-    if isinstance(instr.exp, ExpresionDobleComilla) or isinstance(instr.exp, ExpresionCadenaNumerico) or isinstance(instr.exp, ExpresionArray) or isinstance(instr.exp, LlamadaArray) or isinstance(instr.exp, LlamadaArrayBi):
+    if isinstance(instr.exp, ExpresionDobleComilla) or isinstance(instr.exp, ExpresionCadenaNumerico) or isinstance(instr.exp, ExpresionArray) or isinstance(instr.exp, LlamadaArray) or isinstance(instr.exp, LlamadaArrayBi) or isinstance(instr.exp, LlamadaArrayMulti):
         for i in cadena:
             procesar_asignacion(Asignacion(instr.expDeclarativa.val,ExpresionDobleComilla(i),0,0),local,salida)
             res =  procesar_instrucciones(instr.instrucciones, local, salida)
@@ -347,6 +389,8 @@ def resolver_cadena(expCad, ts, salida) :
         return resolver_expresion_aritmetica(expCad,ts, salida)
     elif isinstance(expCad, LlamadaArray) :
         return resolver_expresion_aritmetica(expCad,ts, salida)
+    elif isinstance(expCad, LlamadaArrayMulti) :
+        return resolver_expresion_aritmetica(expCad,ts, salida)
     elif isinstance(expCad, ExpresionArray):
         lista_cantidades = []
         for exp in expCad.exp:
@@ -359,6 +403,18 @@ def resolver_cadena(expCad, ts, salida) :
             for exp2 in exp:
                 lista_cantidades[c].append(resolver_cadena(exp2,ts,salida))
             c = c + 1
+        return lista_cantidades
+    elif isinstance(expCad, ExpresionArrayMulti):
+        lista_cantidades = [[[]]]
+        c=0
+        c2 = 0
+        for exp in expCad.exp:
+            for exp2 in exp:
+                for exp3 in exp2:
+                    lista_cantidades[c][c2].append(resolver_cadena(exp3,ts,salida))
+                c2 = c2 + 1
+            c = c + 1
+            c2 = 0
         return lista_cantidades
     elif isinstance(expCad, ExpresionDobleComillaPotencia) :
         return expCad.val1 * expCad.val2
@@ -401,6 +457,7 @@ def resolver_cadena(expCad, ts, salida) :
             return len(resolver_expresion_aritmetica(expCad.exp.exp, ts, salida))
         else:
             return len(resolver_cadena(expCad.exp,ts,salida))
+            
     elif isinstance(expCad, ExpresionParse):
         if isinstance(expCad.exp, ExpresionDobleComilla) :
             if expCad.tipo == TIPO_DATO.INT:
@@ -657,6 +714,18 @@ def resolver_expresion_aritmetica(expNum, ts,salida) :
                 print("Error semantico, el indice esta afuera del rango del array")
                 salida.agregar('>'+ "Error semantico, el indice esta afuera del rango del array"+'~')
                 return
+    elif isinstance(expNum, LlamadaArrayMulti) :
+        identificador = ts.obtener(expNum.id)
+        if identificador != "0":
+            indice = resolver_cadena(expNum.indice,ts,salida)
+            indice2 = resolver_cadena(expNum.indice2,ts,salida)
+            indice3 = resolver_cadena(expNum.indice3,ts,salida)
+            if indice  <= len(identificador.valor) and indice2 <= len(identificador.valor[0]) and indice3 <= len(identificador.valor[0][0]) and indice  > 0 and indice2 > 0 and indice3 >0:
+                return identificador.valor[indice - 1][indice2 -1][indice3 -1 ]
+            else:
+                print("Error semantico, el indice esta afuera del rango del array")
+                salida.agregar('>'+ "Error semantico, el indice esta afuera del rango del array"+'~')
+                return
     elif isinstance(expNum, LlamadaFuncion) :
         return procesar_llamada_funcion(expNum, ts, salida)
     elif isinstance(expNum, ExpresionConcatenar) : 
@@ -665,6 +734,7 @@ def resolver_expresion_aritmetica(expNum, ts,salida) :
         exp2 = resolver_cadena(expNum.exp2, ts, salida)
         return exp1 + exp2
     elif isinstance(expNum, ExpresionBooleano) :
+        print(expNum.val)
         return expNum.val
 
 #RECORREMOS EL ARCHIVO DE ENTRADA CON LA FINALIDAD DE IR LELLENDO LOS OBJETOS E INSTRUCCIOENS
@@ -683,6 +753,7 @@ def procesar_instrucciones(instrucciones, ts, salida) :
         elif isinstance(instr, AsignacionTipo) : retorno = procesar_asignacion(instr, ts, salida)
         elif isinstance(instr, AsignacionArray) : retorno = procesar_asignacion(instr, ts, salida)
         elif isinstance(instr, AsignacionArrayBi) : retorno = procesar_asignacion(instr, ts, salida)
+        elif isinstance(instr, AsignacionArrayMulti) : retorno = procesar_asignacion(instr, ts, salida)
         elif isinstance(instr, Mientras) : retorno = procesar_mientras(instr, ts, salida)
         elif isinstance(instr, ForExp) : retorno = procesar_for_expresion(instr, ts, salida)
         elif isinstance(instr, ForRango) : retorno = procesar_for_rango(instr, ts, salida)

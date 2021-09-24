@@ -20,7 +20,9 @@ class Imprimirln(Instruccion) :
     '''
 
     def __init__(self,  cad) :
-        self.cad = cad        
+        self.cad = cad 
+
+       
 
 class Mientras(Instruccion) :
     '''
@@ -102,6 +104,20 @@ class AsignacionArrayBi(Instruccion) :
         self.id = id
         self.indice = indice
         self.indice2 = indice2
+        self.exp = exp
+        self.linea = linea
+        self.columna = columna
+
+class AsignacionArrayMulti(Instruccion) :
+    '''
+        Esta clase representa la instrucción de asignación de variables
+        Recibe como parámetro el identificador a asignar y el valor que será asignado.
+    '''
+    def __init__(self, id, indice, indice2, indice3, exp,linea, columna) :
+        self.id = id
+        self.indice = indice
+        self.indice2 = indice2
+        self.indice3 = indice3
         self.exp = exp
         self.linea = linea
         self.columna = columna
