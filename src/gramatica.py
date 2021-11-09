@@ -2,7 +2,6 @@
 reservadas = {
     'print' : 'IMPRIMIR',
     'println' : 'IMPRIMIRSALTO',
-
     'while' : 'MIENTRAS',
     'if' : 'IF',
     'else' : 'ELSE',
@@ -17,14 +16,8 @@ reservadas = {
     'bool' : 'BOOLEANO',
     'char' : 'CHAR',
     'string' : 'STRING',
-    'Struct' : 'ESTRUCTURA',
+    'struct' : 'ESTRUCTURA',
     'mutable' : 'MUTABLE',
-    'log10' : 'LOG10',
-    'log' : 'LOG',
-    'sin' : 'SEN',
-    'cos' : 'COS',
-    'tan' : 'TAN',
-    'sqrt' : 'SQRT',
     'uppercase':'UPPER',
     'lowercase':'LOWER',
     'end':'END',
@@ -35,10 +28,6 @@ reservadas = {
     'continue':'CONTINUE',
     'parse':'PARSE',
     'trunc':'TRUNC',
-    'float':'R_DECIMAL',
-    'typeof':'TYPE',
-    'push':'PUSH',
-    'pop':'POP',
     'for':'FOR',
     'in':'IN'
 
@@ -74,6 +63,7 @@ tokens  = [
     'AND',
     'POTENCIA',
     'PUNTOS',
+    'PUNTO',
     'CORIZQ',
     'CORDER'
 ] + list(reservadas.values())
@@ -97,7 +87,8 @@ t_IGUALQUE  = r'=='
 t_NIGUALQUE = r'!='
 t_DOSPT     = r'::'
 t_PUNTOS     = r':'
-t_COMA      = r','
+t_PUNTO     = r'\.'
+t_COMA      = r'\,'
 t_NOT       = r'!'
 t_AND       = r'&&'
 t_OR        = r'\|\|'
@@ -165,8 +156,41 @@ def t_error(t):
     t.lexer.skip(1)
 
 # Construyendo el analizador léxico
+from Instruction.Variables.Declaracion import Declaracion
 import ply.lex as lex
 from salida import Salida, Salida_Consola
+from Instruction.Conditional.If import *
+from Instruction.Loops.While import *
+from Instruction.Loops.For import *
+from Instruction.Loops.Break import *
+from Instruction.Loops.Continue import *
+
+from Instruction.Structs.AssignAccess import *
+from Instruction.Structs.CreateStruct import *
+from Instruction.Structs.DeclareStruct import *
+from Instruction.Structs.StructAttr import *
+
+from Instruction.Functions.Function import *
+from Instruction.Functions.Param import *
+from Instruction.Functions.ReturnST import *
+from Abstract.Expresion import *
+from Abstract.Return import *
+from Abstract.Instruccion import *
+from Expressions.UpperCase import *
+from Expressions.LowerCase import *
+from Expressions.Logicas import *
+from Expressions.Access import *
+from Expressions.AccessStruct import *
+from Expressions.Aritmeticas import *
+from Expressions.CallFunc import *
+from Expressions.Literal import *
+from Expressions.Literal2 import *
+from Expressions.Relacional import *
+from Instruction.Print import *
+from Instruction.Variables.Declaracion import *
+
+
+
 lexer = lex.lex()
 
 
@@ -180,12 +204,12 @@ precedence = (
     ('left','POR','DIVIDIDO','MOD'),
     ('nonassoc', 'POTENCIA'),
     ('right','UMENOS'),
+    ('right','UNOT'),
     )
 
 # Definición de la gramática
 
 from expresiones import *
-from instrucciones import *
 
 
 def p_init(t) :
@@ -209,10 +233,11 @@ def p_instruccion(t) :
                         | asignacion_instr
                         | mientras_instr
                         | if_instr
-                        | if_else_instr
-                        | if_elseif_instr
                         | funcion_instr
                         | llamada_funcion_instr PTCOMA
+                        | createStruct 
+                        | declareStructST PTCOMA
+                        | assignAccessST PTCOMA 
                         | retorno_inst
                         | break_inst
                         | continue_inst
@@ -225,32 +250,35 @@ def p_instruccion_imprimir(t) :
                           | IMPRIMIR PARIZQ l_exp PARDER PTCOMA
                           | IMPRIMIRSALTO PARIZQ l_exp PARDER PTCOMA
     '''
-    if t[1] == 'print'  :t[0] = Imprimir(t[3])
-    elif t[1] == 'println'  :t[0] = Imprimirln(t[3])
+    
+    if t[1] == 'print'  :t[0] = Print(t[3], t.lineno(1), t.lexpos(0))
+    elif t[1] == 'println'  :t[0] = Print(t[3], t.lineno(1), t.lexpos(0), True)
 
 
 def p_instruccion_retornar(t) :
     '''retorno_inst     : RETORNO  expresion  PTCOMA
                         | RETORNO  PTCOMA
     '''
-    if t[2] == ';'  :t[0] = Retorno(t.lineno(1),t.lexpos(1),ExpresionDobleComilla("nothing"))
-    else: t[0] = Retorno(t.lineno(1),t.lexpos(1),t[2])
+    if len(t) == 3:
+        t[0] = ReturnST(None, t.lineno(1), t.lexpos(1))
+    else:
+        t[0] = ReturnST(t[2], t.lineno(1), t.lexpos(1))
 
 def p_instruccion_romper(t) :
     '''break_inst       : BREAK PTCOMA
     '''
-    t[0] = Break(t.lineno(1),t.lexpos(1),"break")
+    t[0] = Break(t.lineno(1),t.lexpos(1))
 
 def p_instruccion_continuar(t) :
     '''continue_inst       : CONTINUE PTCOMA
     '''
-    t[0] = Continue(t.lineno(1),t.lexpos(1),"continue")
+    t[0] = Continue(t.lineno(1),t.lexpos(1))
 
 def p_instruccion_definicion(t) :
     '''definicion_instr   : LOCAL asignacion_instr
                           | GLOBAL asignacion_instr
     '''
-    if t[1] == "global": t[0] =Global(t.lineno(1),t.lexpos(1),t[2])
+    #if t[1] == "global": t[0] =Global(t.lineno(1),t.lexpos(1),t[2])
 
 def p_asignacion_instr(t) :
     '''asignacion_instr   : ID IGUAL expresion PTCOMA
@@ -258,21 +286,22 @@ def p_asignacion_instr(t) :
                           | ID CORIZQ expresion CORDER IGUAL expresion PTCOMA
                         
     '''
-    if t[4] == ';': t[0] =Asignacion(t[1], t[3], t.lineno(1),t.lexpos(1))
-    elif t[4] == '::'  :t[0] = AsignacionTipo(t[1], t[3],t[5],t.lineno(1),t.lexpos(1))
-    elif t[2] == '[' :t[0] = AsignacionArray(t[1],t[3], t[6],t.lineno(1),t.lexpos(1))
+
+    if t[4] == ';': t[0] = Declaracion(t[1], t[3], None, t.lineno(1), t.lexpos(1))
+    elif t[4] == '::'  :t[0] = Declaracion(t[1], t[3], t[5], t.lineno(1), t.lexpos(1))
+    #elif t[2] == '[' :t[0] = AsignacionArray(t[1],t[3], t[6],t.lineno(1),t.lexpos(1))
         
 
 
 def p_asignacion_bi_instr(t) :
     '''asignacion_instr       : ID CORIZQ expresion CORDER CORIZQ expresion CORDER IGUAL expresion PTCOMA
     '''
-    t[0] = AsignacionArrayBi(t[1],t[3], t[6], t[9],t.lineno(1),t.lexpos(1))
+    #t[0] = AsignacionArrayBi(t[1],t[3], t[6], t[9],t.lineno(1),t.lexpos(1))
 
 def p_asignacion_multi_instr(t) :
     '''asignacion_instr       : ID CORIZQ expresion CORDER CORIZQ expresion CORDER CORIZQ expresion CORDER IGUAL expresion PTCOMA
     '''
-    t[0] = AsignacionArrayMulti(t[1],t[3], t[6], t[9], t[12],t.lineno(1),t.lexpos(1))
+    #t[0] = AsignacionArrayMulti(t[1],t[3], t[6], t[9], t[12],t.lineno(1),t.lexpos(1))
 
 def p_tipo_var(t) :
     '''tipo_var   : ENTERO64
@@ -281,54 +310,79 @@ def p_tipo_var(t) :
                   | CHAR
                   | STRING
     '''
-    if t[1] == 'int64': t[0] = TIPO_DATO.INT
-    elif t[1] == 'float64': t[0] = TIPO_DATO.FLOAT
-    elif t[1] == 'string': t[0] = TIPO_DATO.STRING
-    elif t[1] == 'char': t[0] = TIPO_DATO.CHAR
-    elif t[1] == 'bool': t[0] = TIPO_DATO.BOOL
+    if t[1] == 'int64': t[0] = Type.INT
+    elif t[1] == 'float64': t[0] = Type.FLOAT
+    elif t[1] == 'string': t[0] = Type.STRING
+    elif t[1] == 'char': t[0] = Type.CHAR
+    elif t[1] == 'bool': t[0] = Type.BOOLEAN
     
 def p_mientras_instr(t) :
-    'mientras_instr     : MIENTRAS expresion_logica instrucciones END PTCOMA'
-    t[0] =Mientras(t[2], t[3])
+    'mientras_instr     : MIENTRAS expresion instrucciones END PTCOMA'
+    t[0] = While(t[2], t[3], t.lineno(1), t.lexpos(1))
 
 def p_for_instr(t) :
     '''for_instr     : FOR ID IN expresion PUNTOS expresion instrucciones END PTCOMA
                      | FOR ID IN expresion instrucciones END PTCOMA
                      '''
-    if t[5] == ":": t[0] =ForRango(ExpresionDobleComilla(t[2]),t[4], t[6],t.lineno(1), t.lexpos(1),t[7])
-    else: t[0] =ForExp(ExpresionDobleComilla(t[2]) ,t[4],t.lineno(1), t.lexpos(1),t[5])
-
+    if t[5] == ":": t[0] =For(t[2],t[4],t[6],t[7])
+    else: t[0] =For(t[4],t[5], t.lineno(1), t.lexpos(1))
+ 
 def p_if_instr(t) :
-    'if_instr           : IF expresion_logica instrucciones END PTCOMA'
-    t[0] =If(t[2], t[3])
-    
+    'if_instr   : IF expresion instrucciones END PTCOMA'
+    t[0] = If(t[2], t[3], t.lineno(1), t.lexpos(1))
 
 def p_if_else_instr(t) :
-    'if_else_instr      : IF  expresion_logica instrucciones ELSE instrucciones END PTCOMA'
-    t[0] =IfElse(t[2], t[3], t[5])
+    'if_instr   : IF  expresion instrucciones ELSE instrucciones END PTCOMA'
+    t[0] =If(t[2], t[3], t.lineno(1), t.lexpos(0), t[5])
 
 def p_lista_elseif_instr(t) :
-    '''if_elseif_instr    : lista_elif   '''
-    t[0] =Lista_elif(t.lineno(1),t.lexpos(1),t[1])
+    '''if_instr    : IF expresion instrucciones elseIfList END PTCOMA'''
+    t[0] = If(t[2], t[3], t.lineno(1), t.lexpos(0), t[4])
 
-def p_elif_else_instr(t) :
-    'lista_elif      : lista_elif ELSEIF expresion_logica instrucciones ELSE instrucciones END PTCOMA'
-    t[1].append(IfElse(t[3], t[4], t[6]))
-    t[0] = t[1]
+def p_elseIfList(t):
+    '''elseIfList   : ELSEIF expresion instrucciones
+                    | ELSEIF expresion instrucciones ELSE instrucciones
+                    | ELSEIF expresion instrucciones elseIfList'''
+    if len(t) == 4:
+        t[0] = If(t[2], t[3], t.lineno(1), t.lexpos(1))
+    elif len(t) == 6:
+        t[0] = If(t[2], t[3], t.lineno(1), t.lexpos(0), t[5])
+    elif len(t) == 5:
+        t[0] = If(t[2], t[3], t.lineno(1), t.lexpos(0), t[4])
 
-def p_if_elseif_instr(t) :
-    'lista_elif      : IF expresion_logica instrucciones '
-    t[0] = [If(t[2], t[3])]
+# STRUCTS
+# CREATE STRUCT
+def p_createStruct(t):
+    'createStruct : ESTRUCTURA ID attList END PTCOMA'
+    t[0] = CreateStruct(t[2], t[3], t.lineno(1), t.lexpos(1))
 
-def p_elif_instr(t) :
-    'lista_elif    : lista_elif ELSEIF expresion_logica instrucciones END PTCOMA'
-    t[1].append(If(t[3], t[4]))
-    t[0] = t[1]
+def p_attList(t):
+    '''attList :  attList PTCOMA ID DOSPT tipo_var PTCOMA
+                | attList PTCOMA ID PTCOMA
+                | ID
+                | ID DOSPT tipo_var'''
+    if len(t) == 4:
+        t[0] = [StructAttr(t[1], t[3], t.lineno(1), t.lexpos(1))]
+    elif len(t) == 2:
+        t[0] = [StructAttr(t[1], None, t.lineno(1), t.lexpos(1))]
+    elif len(t) == 5:
+        t[1].append(StructAttr(t[3], None, t.lineno(1), t.lexpos(1)))
+        t[0] = t[1]
+    else:
+        t[1].append(StructAttr(t[3], t[6], t.lineno(1), t.lexpos(1)))
+        t[0] = t[1]
 
-def p_elif_recursivo_instr(t) :
-    'lista_elif    : lista_elif ELSEIF expresion_logica instrucciones'
-    t[1].append(If(t[3], t[4]))
-    t[0] = t[1]
+# DECLARE STRUCT
+def p_declareStruct(t):
+    'declareStructST : ID DOSPT ID'
+    t[0] = DeclareStruct(t[1], t[3], t.lineno(1), t.lexpos(1))
+
+# ASSIGN ACCESS
+def p_assignAccess(t):
+    'assignAccessST : ID PUNTO ID IGUAL expresion'
+    t[0] = AssignAccess(t[1], t[3], t[5], t.lineno(1), t.lexpos(1))
+
+
 
 
 def p_list_exp_instr(t) :
@@ -342,148 +396,220 @@ def p_expresiones_expresion(t) :
     'l_exp    : expresion '
     t[0] = [t[1]]
 
+
 def p_funcion_instr(t) :
     '''funcion_instr   : FUNC ID PARIZQ PARDER instrucciones END PTCOMA
                        | FUNC ID PARIZQ parametros PARDER instrucciones END PTCOMA'''
-    if t[4] == ')': t[0] = Funcion(t[2],t.lineno(1), t.lexpos(1), [], t[5])
-    else :t[0] = Funcion(t[2],t.lineno(1), t.lexpos(1), t[4], t[6])
+    if len(t) == 8:
+        t[0] = Function(t[2], [], None, t[5], t.lineno(1), t.lexpos(1))
+    else:
+        t[0] = Function(t[2], t[4], None, t[6], t.lineno(1), t.lexpos(1))
+
+def p_decParams(t):
+    '''parametros :       parametros COMA ID tipo_var
+                        | ID tipo_var'''
+    
+    if len(t) == 3:
+        t[0] = [Param(t[1], t[2], t.lineno(1), t.lexpos(1))]
+    else:
+        t[1].append(Param(t[3], t[4], t.lineno(1), t.lexpos(1)))
+        t[0] = t[1]
+
 
 def p_llamada_funcion_instr(t) :
-    '''llamada_funcion_instr   : ID PARIZQ PARDER 
-                       | ID PARIZQ l_exp PARDER '''
-    if t[3] == ')': t[0] = LlamadaFuncion(t[1],t.lineno(1), t.lexpos(1), [])
-    else :t[0] = LlamadaFuncion(t[1],t.lineno(1), t.lexpos(1), t[3])
+    '''llamada_funcion_instr   :  ID PARIZQ PARDER 
+                                | ID PARIZQ expList PARDER '''
+    if len(t) == 4:
+        t[0] = CallFunc(t[1], [], t.lineno(1), t.lexpos(1))
+    else:
+        t[0] = CallFunc(t[1], t[3], t.lineno(1), t.lexpos(1)) 
 
+# CALL PARAMS
+def p_callparams(t):
+    '''expList :  expList COMA expresion
+                | expresion'''
+    if len(t) == 2:
+        t[0] = [t[1]]
+    else:
+        t[1].append(t[3])
+        t[0] = t[1]
 
-def p_parametros_funcion_instr(t) :
-    '''parametros   : parametros COMA ID '''
-    t[1].append(Asignacion(t[3],ExpresionDobleComilla("nothing"), t.lineno(1),t.lexpos(1)))
-    t[0] = t[1]
-
-
-def p_parametros_parametro_instr(t) : 
-    '''parametros   :  ID '''
-    t[0] = [Asignacion(t[1],ExpresionDobleComilla("nothing"), t.lineno(1),t.lexpos(1))]
-         
-         
 
 def p_expresion_binaria(t):
-    '''expresion_numerica : expresion_numerica MAS expresion_numerica
-                        | expresion_numerica MENOS expresion_numerica
-                        | expresion_numerica POR expresion_numerica
-                        | expresion_numerica POR expresion
-                        | expresion_numerica DIVIDIDO expresion_numerica
+    '''expresion : expresion MAS expresion
+                  | expresion MENOS expresion
+                  | expresion POR expresion
+                  | expresion DIVIDIDO expresion
+                  | expresion OR expresion
+                  | expresion AND expresion
+                  | expresion IGUALQUE expresion
+                  | expresion NIGUALQUE expresion
+                  | expresion MAYQUE expresion
+                  | expresion MENQUE expresion
+                  | expresion MAYIGQUE expresion
+                  | expresion MENIGQUE expresion
+                  | expresion POTENCIA expresion
+                  | expresion MOD expresion
+                  | llamada_funcion_instr
+                  | accessST
+                  '''
+    if len(t) == 2: 
+        t[0] = t[1]
+    if t[2] == '+'  : 
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.MAS, t.lineno(2), t.lexpos(1))
+    elif t[2] == '-':
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.MENOS, t.lineno(2), t.lexpos(1))
+    elif t[2] == '*': 
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.POR, t.lineno(2), t.lexpos(1))
+    elif t[2] == '/': 
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.DIVIDIDO, t.lineno(2), t.lexpos(1))
+    elif t[2] == '^': 
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.POTENCIAL, t.lineno(2), t.lexpos(1))
+    elif t[2] == '%': 
+        t[0] = Aritmeticas(t[1], t[3], OPERACION_ARITMETICA.MOD, t.lineno(2), t.lexpos(1))
+    elif t[2] == '==': 
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.IGUAL,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '!=': 
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.DIFERENTE,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '>': 
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.MAYOR_QUE,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '<': 
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.MENOR_QUE,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '>=': 
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.MAYORIG_QUE,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '<=':
+        t[0] = Relacionales(t[1], t[3], OPERACION_RELACIONALES.MENORIG_QUE,t.lineno(2), t.lexpos(1) )
+    elif t[2] == '||':
+        t[0] = Logicas(t[1], t[3],OPERACION_LOGICAS.OR, t.lineno(2), t.lexpos(1))
+    elif t[2] == '&&': 
+        t[0] = Logicas(t[1], t[3],OPERACION_LOGICAS.AND, t.lineno(2), t.lexpos(1))
+    
 
-                        | len_inst MAS expresion_numerica
-                        | len_inst MENOS expresion_numerica
-                        | len_inst POR expresion_numerica
-                        | len_inst POR expresion
-                        | len_inst DIVIDIDO expresion_numerica
-                        
-                        | expresion_numerica MOD expresion_numerica
-                        | expresion_numerica POTENCIA expresion_numerica
-                        | LOG10 PARIZQ expresion_numerica PARDER
-                        | LOG PARIZQ expresion_numerica COMA expresion_numerica PARDER
-                        | SEN PARIZQ expresion_numerica PARDER
-                        | COS PARIZQ expresion_numerica PARDER
-                        | TAN PARIZQ expresion_numerica PARDER
-                        | SQRT PARIZQ expresion_numerica PARDER
-                        '''
-    if t[2] == '+'  : t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.MAS)
-    elif t[2] == '-': t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.MENOS)
-    elif t[2] == '*': t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.POR)
-    elif t[2] == '/': t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.DIVIDIDO)
-    elif t[2] == '%': t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.MOD)
-    elif t[2] == '^': t[0] = ExpresionBinaria(t[1], t[3], OPERACION_ARITMETICA.POTENCIAL)
-    elif t[1] == 'log10': t[0] = ExpresionUnaria(t[3], OPERACION_ARITMETICA.LOG10)
-    elif t[1] == 'log': t[0] = ExpresionBinaria(t[3],t[5], OPERACION_ARITMETICA.LOG)
-    elif t[1] == 'sin': t[0] = ExpresionUnaria(t[3], OPERACION_ARITMETICA.SEN)
-    elif t[1] == 'cos': t[0] = ExpresionUnaria(t[3], OPERACION_ARITMETICA.COS)
-    elif t[1] == 'tan': t[0] = ExpresionUnaria(t[3], OPERACION_ARITMETICA.TAN)
-    elif t[1] == 'sqrt': t[0] = ExpresionUnaria(t[3], OPERACION_ARITMETICA.SQRT)
 
+def p_accessST(t):
+    '''accessST : ID PUNTO ID'''
+    print('entro')
+    t[0] = AccessStruct(t[1], t[3], t.lineno(1), t.lexpos(1))
+
+
+
+
+#operador aritmetico UNOT
 def p_expresion_unaria(t):
-    'expresion_numerica : MENOS expresion_numerica %prec UMENOS'
-    t[0] = ExpresionNegativo(t[2])
+    '''expresion : MENOS expresion %prec UMENOS
+                    | NOT expresion %prec UNOT'''
+    if t[1] == '-':
+        t[0] = Aritmeticas(None, t[2], OPERACION_ARITMETICA.UMENOS, t.lineno(1), t.lexpos(1))
+    elif t[1] == '!':
+        t[0] = Logicas(t[2], None,OPERACION_LOGICAS.NOT,  t.lineno(1), t.lexpos(1))
 
 def p_expresion_agrupacion(t):
-    'expresion_numerica : PARIZQ expresion_numerica PARDER'
-    t[0] = t[2]
-
-def p_expresion_agrupacion2(t):
     'expresion : PARIZQ expresion PARDER'
     t[0] = t[2]
 
-def p_expresion_number(t):
-    '''expresion_numerica : ENTERO
-                        | DECIMAL'''
-    t[0] = ExpresionNumero(t[1])
+def p_expresion_identificador(t):
+    'expresion : ID'
+    t[0] = Access(t[1], t.lineno(1),t.lexpos(1))
 
-def p_expresion_id(t):
-    'expresion_numerica   : ID'
-    t[0] = ExpresionIdentificador(t[1])
+'''def p_expresion_array(t):
+    'expresion : ID arrays_1'
+    t[0] = Array(t[1],t[2], t.lineno(1), t.lexpos(1) )
+
+def p_expresion_struct(t):
+    'expresion : ID PUNTO asignacion_params'
+    #t[0] = Struct(t[1], t.lineno(1), t.lexpos(1), t[3])
+
+def p_expresion_array_2(t):
+    'expresion : ID CORI DPUNTOS CORD'
+    #t[0] = Array(t[1], t.lineno(1), t.lexpos(1), TIPO.ARRAY, None)
+
+def p_expresion_array_3(t):
+    'expresion : ID CORIZQ expresion DPUNTOS expresion CORD'
+    #t[0] = Array(t[1], t.lineno(1), t.lexpos(1), TIPO.ARRAY, None ,[t[3], t[5]])
+
+def p_expresion_array_4(t):
+    'expresion : CORIZQ parametros_ll CORDER'
+    t[0] = Declaracion_Arrays('',t.lineno(1), t.lexpos(1),t[2])'''
+
+def p_expresion_entero(t):
+    'expresion : ENTERO'
+    t[0] = Literal(int(t[1]), Type.INT, t.lineno(1), t.lexpos(1))
+
+def p_expresion_decimal(t):
+    'expresion : DECIMAL'
+    t[0] = Literal(float(t[1]), Type.FLOAT, t.lineno(1), t.lexpos(1))
+
+def p_expresion_char(t):
+    'expresion : CARACTER'
+    t[0] = Literal(t[1], Type.CHAR, t.lineno(1), t.lexpos(1))
+
+def p_expresion_cadena(t):
+    'expresion : CADENA'
+    t[0] = Literal(str(t[1]), Type.STRING, t.lineno(1), t.lexpos(1))
+
+def p_expresion_true(t):
+    'expresion : VERDADERO'
+    t[0] = Literal(True,Type.BOOLEAN, t.lineno(1), t.lexpos(1))
+
+def p_expresion_false(t):
+    'expresion : FALSO'
+    t[0] = Literal(False, Type.BOOLEAN, t.lineno(1), t.lexpos(1))
+
+
+
+
+
+
+
 
 def p_expresion_array(t):
     'expresion_numerica   : ID CORIZQ expresion CORDER'
-    t[0] = LlamadaArray(t[1], t[3], t.lineno(1),t.lexpos(1))
+    #t[0] = LlamadaArray(t[1], t[3], t.lineno(1),t.lexpos(1))
 
 def p_expresion_arraybi(t):
     'expresion_numerica   : ID CORIZQ expresion CORDER CORIZQ expresion CORDER'
-    t[0] = LlamadaArrayBi(t[1], t[3], t[6], t.lineno(1),t.lexpos(1))
+    #t[0] = LlamadaArrayBi(t[1], t[3], t[6], t.lineno(1),t.lexpos(1))
 
 def p_expresion_arraymulti(t):
     'expresion_numerica   : ID CORIZQ expresion CORDER CORIZQ expresion CORDER CORIZQ expresion CORDER'
-    t[0] = LlamadaArrayMulti(t[1], t[3], t[6], t[9], t.lineno(1),t.lexpos(1))
-
-
-def p_expresion_cadena(t) :
-    'expresion     : CADENA'
-    t[0] = ExpresionDobleComilla(t[1])
+    #t[0] = LlamadaArrayMulti(t[1], t[3], t[6], t[9], t.lineno(1),t.lexpos(1))
 
 
 def p_expresion_vector(t) :
     'expresion     : CORIZQ l_exp CORDER'
-    t[0] = ExpresionArray(t.lineno(1), t.lexpos(1),t[2])
+    #t[0] = ExpresionArray(t.lineno(1), t.lexpos(1),t[2])
 
 def p_lista_array(t):
     'expresion :   CORIZQ l_array_bidimencional CORDER'
-    t[0] = ExpresionArrayBi(t.lineno(1), t.lexpos(1),t[2])
+    #t[0] = ExpresionArrayBi(t.lineno(1), t.lexpos(1),t[2])
 
 def p_expresion_vectorbi(t) :
     'l_array_bidimencional     :  l_array_bidimencional COMA expresion '
-    t[1].append(t[3])
-    t[0] = t[1]
+    #t[1].append(t[3])
+    #t[0] = t[1]
     
 def p_expresiones_expresion2(t) :
     'l_array_bidimencional    : expresion '
-    t[0] = [t[1]]
+    #t[0] = [t[1]]
 
-def p_lista_array(t):
+def p_lista_array_multidimencional(t):
     'expresion :   CORIZQ l_array_multidimencional CORDER'
-    t[0] = ExpresionArrayMulti(t.lineno(1), t.lexpos(1),t[2])
+    #t[0] = ExpresionArrayMulti(t.lineno(1), t.lexpos(1),t[2])
 
-def p_expresion_vectorbi(t) :
+def p_expresion_vectorMulti(t) :
     'l_array_multidimencional     :  l_array_multidimencional COMA expresion '
-    t[1].append(t[3])
-    t[0] = t[1]
+    #t[1].append(t[3])
+    #t[0] = t[1]
     
-def p_expresiones_expresion2(t) :
+def p_expresiones_expresion3(t) :
     'l_array_multidimencional    : expresion '
-    t[0] = [t[1]]
+    #t[0] = [t[1]]
 
 
 
-
-
-
-
-
-
-
-
-def p_expresion_len(t) :
+'''def p_expresion_len(t) :
     'len_inst     : LEN PARIZQ expresion PARDER'
-    t[0] = ExpresionLength(t[3])
+    #t[0] = ExpresionLength(t[3])'''
 
 def p_operacion_cadena(t) :
     '''expresion     : UPPER PARIZQ expresion PARDER
@@ -491,96 +617,35 @@ def p_operacion_cadena(t) :
                      | LEN PARIZQ expresion PARDER
                      | PARSE PARIZQ tipo_var COMA expresion PARDER
                      | TRUNC PARIZQ expresion PARDER
-                     | R_DECIMAL PARIZQ expresion PARDER
-                     | STRING PARIZQ expresion PARDER
-                     | TYPE PARIZQ expresion PARDER
-                     | PUSH PARIZQ expresion PARDER
-                     | POP PARIZQ expresion PARDER
-                     | llamada_funcion_instr
-    '''
-    if t[1] == "uppercase" :t[0] = ExpresionUpperCase(t[3])
-    elif t[1] == "lowercase": t[0] = ExpresionLowerCase(t[3])
-    elif t[1] == "length": t[0] = ExpresionLength(t[3])
-    elif t[1] == "parse": t[0] = ExpresionParse(t[5],t[3],t.lineno(1),t.lexpos(1))
-    elif t[1] == "trunc": t[0] = ExpresionTrunc(t[3],t.lineno(1),t.lexpos(1))
-    elif t[1] == "float": t[0] = ExpresionFloat(t[3],t.lineno(1),t.lexpos(1))
-    elif t[1] == "string": t[0] = ExpresionString(t[3],t.lineno(1),t.lexpos(1))
-    elif t[1] == "typeof": t[0] = ExpresionType(t[3],t.lineno(1),t.lexpos(1))
-    else:
-        t[0] = t[1]
+                     | STRING PARIZQ expresion PARDER'''
+    
+    if t[1] == "uppercase" :t[0] = UpperCase(t[3],Type.STRING, t.lineno(1), t.lexpos(1))
+    elif t[1] == "lowercase": t[0] = LowerCase(t[3],Type.STRING, t.lineno(1), t.lexpos(1))
+    #elif t[1] == "length": t[0] = ExpresionLength(t[3])
+    #elif t[1] == "parse": t[0] = ExpresionParse(t[5],t[3],t.lineno(1),t.lexpos(1))
+    #elif t[1] == "trunc": t[0] = ExpresionTrunc(t[3],t.lineno(1),t.lexpos(1))
+    #elif t[1] == "string": t[0] = ExpresionString(t[3],t.lineno(1),t.lexpos(1))
 
 
 def p_expresion_cadena_potencia(t) :
-    'expresion     : CADENA POTENCIA ENTERO'
-    t[0] = ExpresionDobleComillaPotencia(t[1],t[3])
+    '''expresion     : CADENA POTENCIA ENTERO'''
+    t[0] = Literal2(t[1],t[3],Type.STRING,t.lineno(1), t.lexpos(1))
+def p_expresion_potencia_cadena(t) :
+    '''expresion     : ENTERO POTENCIA CADENA'''
+    t[0] = Literal2(t[3],t[1],Type.STRING,t.lineno(1), t.lexpos(1))
  
-
+'''
 def p_expresion_caracter(t) :
     'expresion     : CARACTER'
-    t[0] = ExpresionComillasSimples(t[1])
+    #t[0] = ExpresionComillasSimples(t[1])
 
 def p_expresion_nothing(t) :
     'expresion     : NULO'
-    t[0] = ExpresionDobleComilla("nothing")
+    #t[0] = ExpresionDobleComilla("nothing")'''
 
-def p_expresion_cadena_numerico(t) :
-    'expresion     : expresion_numerica'
-    t[0] = ExpresionCadenaNumerico(t[1])
-
-def p_expresion_cadena_logico(t) :
-    'expresion     : expresion_logica'
-    t[0] = ExpresionCadenaBooleano(t[1])
-
-def p_expresion_booleana(t) :
-    '''expresion_bool     : FALSO
-                     | VERDADERO            
-    '''
-    if t[1] == "true": t[0] = ExpresionBooleano(True)
-    elif t[1] == "false": t[0] = ExpresionBooleano(False)
-
-
-def p_expresion_booleana_anadida(t) :
-    'expresion_numerica     : expresion_bool        '
-    t[0] = t[1]
-
-def p_expresion_logica(t) :
-    '''expresion_logica : expresion_logica AND expresion_logica
-                        | expresion_logica OR expresion_logica
-                        | NOT expresion_logica
-
-                        | expresion_bool AND expresion_bool
-                        | expresion_bool OR expresion_bool
-                        | NOT expresion_bool
-
-                        | expresion_logica AND expresion_bool
-                        | expresion_logica OR expresion_bool
-
-                        | expresion_bool AND expresion_logica
-                        | expresion_bool OR expresion_logica
-
-                        | PARIZQ expresion_logica PARDER
-                        | expresion MAYQUE expresion
-                        | expresion MENQUE expresion
-                        | expresion IGUALQUE expresion
-                        | expresion NIGUALQUE expresion
-                        | expresion MENIGQUE expresion
-                        | expresion MAYIGQUE expresion
-                        
-                        '''
-    if t[2] == '>'    : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.MAYOR_QUE)
-    elif t[2] == '<'  : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.MENOR_QUE)
-    elif t[2] == '==' : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.IGUAL)
-    elif t[1] == '(' : t[0] = t[2]
-    elif t[2] == '!=' : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.DIFERENTE)
-    elif t[2] == '<=' : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.MENORIG_QUE)
-    elif t[2] == '>=' : t[0] = ExpresionLogica(t[1], t[3], OPERACION_LOGICA.MAYORIG_QUE)
-    elif t[2] == '&&' : t[0] = ExpresionRelacional(t[1], t[3], OPERACION_LOGICA.AND)
-    elif t[2] == '||' : t[0] = ExpresionRelacional(t[1], t[3], OPERACION_LOGICA.OR)
-    elif t[1] == '!' : t[0] = ExpresionRelacionalUnario(t[2], OPERACION_LOGICA.NOT)
-
-def p_expresion_concatenacion(t) :
+'''def p_expresion_concatenacion(t) :
     'expresion     : expresion POR expresion'
-    t[0] = ExpresionConcatenar(t[1], t[3])
+    #t[0] = ExpresionConcatenar(t[1], t[3])'''
     
 def p_error(t):
     print(t)
@@ -591,4 +656,5 @@ parser = yacc.yacc()
 
 
 def parse(input) :
+
     return parser.parse(input)

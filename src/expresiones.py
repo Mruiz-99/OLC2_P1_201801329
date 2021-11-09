@@ -1,31 +1,6 @@
 from enum import Enum
 
-class OPERACION_ARITMETICA(Enum) :
-    MAS = 1
-    MENOS = 2
-    POR = 3
-    DIVIDIDO = 4
-    MOD = 5
-    POTENCIAL = 6
-    LOG10 = 7
-    LOG = 8 
-    SEN = 9
-    COS = 10
-    TAN = 11
-    SQRT = 12
-    
-    
 
-class OPERACION_LOGICA(Enum) :
-    MAYOR_QUE = 1
-    MENOR_QUE = 2
-    IGUAL = 3
-    DIFERENTE = 4
-    MAYORIG_QUE = 5
-    MENORIG_QUE = 6
-    AND = 7
-    OR = 8
-    NOT = 9
 
 class ExpresionNumerica:
     '''
