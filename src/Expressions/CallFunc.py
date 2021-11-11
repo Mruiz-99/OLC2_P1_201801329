@@ -1,5 +1,6 @@
 from Abstract.Expresion import *
 from Abstract.Return import *
+from Instruction.Functions.ReturnST import ReturnST
 from Symbol.Environment import *
 from Symbol.Generator import *
 
@@ -10,35 +11,70 @@ class CallFunc(Expresion):
         self.id = id
         self.params = params
     
+    def GuardarTemp(self, generador, ent, paramsTemp):
+        generador.addComment("Guardado de temporales")
+        tmp = generador.addTemp()
+
+        for param in paramsTemp:
+            generador.addExp(tmp,'P',ent.size,'+')
+            generador.setStack(tmp,param)
+            ent.size = ent.size + 1
+        generador.addComment("Finalizado de guardado de temporales") 
+
+    def RecuperacionTemp(self, generador, ent, paramsTemp):
+        generador.addComment("Recuperacion de temporales")
+        tmp = generador.addTemp()
+
+        for param in paramsTemp:
+            ent.size = ent.size - 1
+            generador.addExp(tmp,'P',ent.size,'+')
+            generador.getStack(param,tmp)
+            
+        generador.addComment("Finalizado de recuperacion de temporales") 
+
+
     def compile(self, environment):
         try:
             func = environment.getFunc(self.id)
-            if func != None:
-                paramValues = []
+            paramValues = []
 
-                genAux = Generator()
-                generator = genAux.getInstance()
-                size = environment.size
-                for param in self.params:
-                    paramValues.append(param.compile(environment))
-                temp = generator.addTemp()
+            genAux = Generator()
+            generator = genAux.getInstance()
+            size = environment.size
+            paramsTemp = []
+            for param in self.params:
+                if isinstance(param,CallFunc):
+                    self.GuardarTemp(generator,environment,paramsTemp)
+                    aux = param.compile(environment)
+                    paramValues.append(aux)
+                    self.RecuperacionTemp(generator,environment,paramsTemp)
+                else:
+                    aux = param.compile(environment)
+                    if isinstance(aux,Exception):
+                        return aux
+                    paramValues.append(aux)
+                    paramsTemp.append(aux.value)
+                        
+            temp = generator.addTemp()
 
-                generator.addExp(temp, 'P', size+1, '+')
-                aux = 0
-                for param in paramValues:
-                    aux = aux +1
-                    generator.setStack(temp, param.value)
-                    if aux != len(paramValues):
-                        generator.addExp(temp, temp, '1', '+')
+            generator.addExp(temp, 'P', size+1, '+')
+            aux = 0
+            for param in paramValues:
+                aux = aux +1
+                generator.setStack(temp, param.value)
+                if aux != len(paramValues):
+                    generator.addExp(temp, temp, '1', '+')
                 
-                generator.newEnv(size)
-                generator.callFun(self.id)
-                generator.getStack(temp, 'P')
-                generator.retEnv(size)
+            generator.newEnv(size)
+            generator.callFun(self.id)
+            generator.getStack(temp, 'P')
+            generator.retEnv(size)
                 
-                # TODO: Verificar tipo de la funcion. Boolean es distinto
-                return Return(temp, func.type, True)
-            else:
+            # TODO: Verificar tipo de la funcion. Boolean es distinto
+            return Return(temp, Type.INT, True)
+        except:
+            print("Error en llamada a funcion")
+        '''else:
                 # STRUCT
                 struct = environment.getStruct(self.id)
                 if struct != None:
@@ -73,6 +109,5 @@ class CallFunc(Expresion):
                             generator.putLabel(retLbl)
                         generator.addExp(aux, aux, '1', '+')
                     
-                    return Return(returnTemp, Type.STRUCT, True)
-        except:
-            print("Error en llamda a funcion")
+                    return Return(returnTemp, Type.STRUCT, True)'''
+        

@@ -1,15 +1,10 @@
-function funcion(a string, b int64)
-num = 0;
-while num < 10
-num = num + 1;
-if num == 5
-println(a);
-println(b);
-return 5;
+function ackerman(m int64, n int64)::int64 
+    if m == 0
+        return n + 1;
+    elseif m > 0 && n == 0
+        return ackerman(m - 1, 1);
+    else
+        return ackerman(m - 1, ackerman(m, n - 1));
+    end;
 end;
-print(num);
-end;
-return 0;
-end;
-
-z = funcion("Hola paaa", 52);
+println(ackerman(3, 5));

@@ -18,7 +18,7 @@ class Print(Instruccion):
 
         if(val.type == Type.INT):
             generator.addPrint("d", val.value)
-        elif val.type == Type.FLOAT:
+        elif val.type == Type.FLOAT or val.type == Type.ARRAY:
             generator.addPrint("f", val.value)
         elif val.type == Type.BOOLEAN:
             tempLbl = generator.newLabel()
@@ -47,8 +47,5 @@ class Print(Instruccion):
             temp = generator.addTemp()
             generator.getStack(temp, 'P')
             generator.retEnv(env.size)
-        else:
-            print("POR HACER")
-        
         if self.newLine:
             generator.addPrint("c", 10)

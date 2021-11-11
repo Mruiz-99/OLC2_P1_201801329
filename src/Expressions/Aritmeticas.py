@@ -1,5 +1,6 @@
 from Abstract.Expresion import *
 from Abstract.Return import *
+from Expressions.CallFunc import CallFunc
 from Symbol.Generator import Generator
 from enum import Enum
 import uuid
@@ -26,8 +27,16 @@ class Aritmeticas(Expresion):
         generator = genAux.getInstance()
         if self.left != None:
             leftValue = self.left.compile(env)
-        rightValue = self.right.compile(env)
-
+        if isinstance(self.right, CallFunc):
+            self.right.GuardarTemp(generator,env,[leftValue.value])
+            rightValue = self.right.compile(env)
+            if isinstance(rightValue, Exception):
+                return rightValue
+            self.right.RecuperacionTemp(generator,env,[leftValue.value])
+        else:
+            rightValue = self.right.compile(env)
+            if isinstance(rightValue, Exception):
+                return rightValue
         temp = generator.addTemp()
         op = ''
         if(self.type == OPERACION_ARITMETICA.MAS):

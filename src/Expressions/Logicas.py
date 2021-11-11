@@ -8,7 +8,7 @@ class OPERACION_LOGICAS(Enum) :
     OR = 1
     NOT = 2
 
-class Logicas(Expresion):
+class Logicas(Expresion): 
 
     def __init__(self, left, right, type, line, column):
         Expresion.__init__(self, line, column)

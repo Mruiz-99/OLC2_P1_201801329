@@ -51,9 +51,9 @@ class Environment:
     
     def getFunc(self, idFunc):
         env = self
-        while env != None:
-            if idFunc in env.functions.keys():
-                return env.functions[idFunc]
+        #print(env.functions)
+        if idFunc in env.functions.keys():
+            return env.functions[idFunc]
         return None
         
     def getStruct(self, idStruct):

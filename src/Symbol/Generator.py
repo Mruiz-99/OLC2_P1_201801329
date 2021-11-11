@@ -19,6 +19,7 @@ class Generator:
         self.imports2 = ["fmt","math"]
         # Lista de Nativas
         self.printString = False
+        self.TruncInt = False
         self.concatString = False
         self.repeticionString = False
         self.upperString = False
@@ -354,6 +355,37 @@ class Generator:
         self.setStack('P',t1)
         self.addEndFunc()
         self.inNatives = False
+
+
+    def fTrunc(self):
+        if(self.TruncInt):
+            return
+        self.TruncInt = True
+        self.inNatives = True
+
+        self.addBeginFunc('Trunc')
+
+        # Temporal puntero
+        t2 = self.addTemp()
+        t3 = self.addTemp()
+        t4 = self.addTemp()
+        t5 = self.addTemp()
+
+        L0 = self.newLabel()
+        L1 = self.newLabel()
+        L2 = self.newLabel()
+
+        self.addExp(t2,'P','0','+')
+        self.getStack(t3,t2)
+        self.setImport("math")
+        self.addModulo(t4,t3,'1')
+        self.addExp(t5,t3,t4,'-')
+        self.setStack('P',t5)
+        self.addGoto(L0)
+        self.putLabel(L0)
+        self.addEndFunc()
+        self.inNatives = False
+
 
 
     def ftoLower(self):

@@ -1,5 +1,6 @@
 from Abstract.Expresion import *
 from Abstract.Return import *
+from Instruction.Print import Print
 from Symbol.Generator import Generator
 import uuid
 class Literal(Expresion):
@@ -44,6 +45,21 @@ class Literal(Expresion):
 
             generator.setHeap('H', '-1')            # FIN DE CADENA
             generator.nextHeap()
+
+            return Return(retTemp, self.type, True)
+        elif self.type == Type.ARRAY:
+            retTemp = generator.addTemp()
+            t1 = generator.addTemp()
+            generator.addExp(retTemp, 'H', '', '')
+            generator.addExp(t1,retTemp,'1','+')
+            generator.setHeap('H', len(self.value))
+            print(len(self.value))
+            size_vector = len(self.value) + 1
+            generator.addExp('H','H',str(size_vector),'+')
+            print(self.value)
+            for valor in self.value:
+                generator.setHeap(t1, valor.value) 
+                generator.addExp(t1,t1,'1','+')             
 
             return Return(retTemp, self.type, True)
         else:

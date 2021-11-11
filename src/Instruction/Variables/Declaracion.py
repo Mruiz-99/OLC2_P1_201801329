@@ -7,7 +7,6 @@ class Declaracion(Instruccion):
     def __init__(self, id, value, tipo, line, column):
         Instruccion.__init__(self, line, column)
         self.id = id
-        print(id)
         self.value = value
         self.tipo = tipo
     
@@ -17,6 +16,7 @@ class Declaracion(Instruccion):
 
         generator.addComment("Compilacion de valor de variable")
         # Compilacion de valor que estamos asignando
+        print(self.value)
         val = self.value.compile(environment)
 
         generator.addComment("Fin de valor de variable")
@@ -28,6 +28,7 @@ class Declaracion(Instruccion):
 
         # Guardado y obtencion de variable. Esta tiene la posicion, lo que nos sirve para asignarlo en el heap
         newVar = environment.getVar(self.id)
+        
         if newVar == None:
             newVar = environment.saveVar(self.id, val.type, (val.type == Type.STRING or val.type == Type.STRUCT), self.value.structType)
         newVar.type = val.type
