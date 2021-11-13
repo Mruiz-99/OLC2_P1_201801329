@@ -23,6 +23,7 @@ class Declaracion(Instruccion):
         
         if ( self.tipo != None) :
             if(self.tipo != val.type):
+               print("Error semantico, el valor asignado no coincide con el tipo declarado. En la linea: "+self.line+" y columna: "+self.column)
                return  Exception ("Semantico", "No se puede utilizar la expresion booleana en: ", self.line, self.column)
 
 
